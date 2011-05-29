@@ -4,26 +4,32 @@ using namespace std;
 using namespace boost::phoenix;
 using namespace boost::spirit::qi;
 
-void turing_machine::process_command(char c) {
+void turing_machine::process_commands(const bf_command_sequence& c) {
 
-  switch(c) {
-  case '+': alter_data(1); break;
-  case '-': alter_data(-1); break;
-  case '<': move_data_ptr(-1); break;
-  case '>': move_data_ptr(1); break;
-  case '.': output_data(); break;
-  case ',': input_data(); break;
+  switch(c.m_command) {
+  case '+': alter_data(c.m_repetitions); break;
+  case '-': alter_data(-c.m_repetitions); break;
+  case '>': move_data_ptr(c.m_repetitions); break;
+  case '<': move_data_ptr(-c.m_repetitions); break;
+  case '.':
+    for(int i = 0; i < c.m_repetitions; ++i)
+      output_data();
+    break;
+  case ',':
+    for(int i = 0; i < c.m_repetitions; ++i)
+      input_data();
+    break;
   default: throw "invalid command";
   };
   
 }
 
-void turing_machine::process_command_sequence(const std::vector<char>& v) {
+void turing_machine::process_command_sequence(const std::vector<bf_command_sequence>& v) {
   std::for_each(
 		v.begin(),
 		v.end(),
 		bind(
-		     &turing_machine::process_command,
+		     &turing_machine::process_commands,
 		     this,
 		     arg_names::arg1
 		     )

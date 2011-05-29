@@ -11,11 +11,24 @@
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/foreach.hpp>
 
+struct bf_command_sequence {
+
+  bf_command_sequence() {}
+  bf_command_sequence(const char* c, int i)
+  : m_command(*c)
+  , m_repetitions(i) {}
+
+  char m_command;
+  int m_repetitions;
+  
+};
+
+
 struct bf_statement;
 
 typedef boost::variant<
 boost::recursive_wrapper<bf_statement>
-, std::vector<char>
+, std::vector<bf_command_sequence>
   > bf_expression;
 
 struct bf_statement {
@@ -37,8 +50,8 @@ struct turing_machine {
   : m_data(30000, 0),
     m_data_ptr(0) {}
 
-  void process_command(char c);
-  void process_command_sequence(const std::vector<char>& v);
+  void process_commands(const bf_command_sequence& c);
+  void process_command_sequence(const std::vector<bf_command_sequence>& v);
 
   bool is_zero() const { return (m_data[m_data_ptr] == 0); }
   void alter_data(char a);
@@ -56,7 +69,9 @@ struct turing_machine_visitor : boost::static_visitor<> {
   turing_machine_visitor(turing_machine& tm)
     : m_tm(tm) {}
 
-  void operator()(const std::vector<char>& v) const { m_tm.process_command_sequence(v); }
+  void operator()(const std::vector<bf_command_sequence>& v) const {
+    m_tm.process_command_sequence(v);
+  }
 
   void operator()(const bf_statement& s) const {
     while(!m_tm.is_zero()) {
@@ -80,7 +95,69 @@ struct bf_grammar
     expression %= command_sequence | statement;
     statement %= lit('[') >> +expression >> lit(']');
     command_sequence %= +command_token;
-    command_token %= char_("+-><.,");
+    command_token =
+      eps[_a = val(0)] >> 
+      +(
+	char_("+")[
+		   _a += val(1)
+		   ]
+	)[
+	  _val = construct<bf_command_sequence>(
+						val("+")
+						, _a
+						)
+	  ]
+      | +(
+	  char_("-")[
+		     _a += val(1)
+		     ]
+	  )[
+	    _val = construct<bf_command_sequence>(
+						  val("-")
+						  , _a
+						  )
+	    ]
+      | +(
+	  char_(">")[
+		     _a += val(1)
+		     ]
+	  )[
+	    _val = construct<bf_command_sequence>(
+						  val(">")
+						  , _a
+						  )
+	    ]
+      | +(
+	  char_("<")[
+		     _a += val(1)
+		     ]
+	  )[
+	    _val = construct<bf_command_sequence>(
+						  val("<")
+						  , _a
+						  )
+	    ]
+      | +(
+	  char_(".")[
+		     _a += val(1)
+		     ]
+	  )[
+	    _val = construct<bf_command_sequence>(
+						  val(".")
+						  , _a
+						  )
+	    ]
+      | +(
+	  char_(",")[
+		     _a += val(1)
+		     ]
+	  )[
+	    _val = construct<bf_command_sequence>(
+						  val(",")
+						  , _a
+						  )
+	    ]
+      ;
     
     expression.name("expression");
     statement.name("statement");
@@ -97,7 +174,7 @@ struct bf_grammar
   rule<std::vector<char>::iterator, vector<bf_expression>()> start;
   rule<std::vector<char>::iterator, bf_expression()> expression;
   rule<std::vector<char>::iterator, bf_statement()> statement;
-  rule<std::vector<char>::iterator, vector<char>()> command_sequence;
-  rule<std::vector<char>::iterator, char()> command_token;
+  rule<std::vector<char>::iterator, vector<bf_command_sequence>()> command_sequence;
+  rule<std::vector<char>::iterator, bf_command_sequence(), locals<int> > command_token;
 
 };
