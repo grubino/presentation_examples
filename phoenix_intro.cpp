@@ -10,10 +10,13 @@ ostream& operator<<(ostream& os, const bf_command_sequence& bfcs) {
   }
 }
 
-ostream& operator<<(ostream& os, const bf_command_string& bfcs) {
-  BOOST_FOREACH(char c, bfcs) {
-    os << c;
-  }
+ostream& operator<<(ostream& os, const bf_clear_cell& cc) {
+  os << "[-]";
+  return os;
+}
+
+ostream& operator<<(ostream& os, const bf_transfer_cell& tc) {
+  os << "[" << tc.offset << ", " << tc.quantity << "]";
   return os;
 }
 
@@ -46,8 +49,13 @@ void turing_machine::alter_data(char a) {
     m_data[m_data_ptr] = 0;
 }
 void turing_machine::move_data_ptr(long i) {
-  if((m_data_ptr + i) > m_data.size())
-    m_data.resize(m_data.size() + 30000, 0);
+  if(m_data_ptr + i > static_cast<long>(m_data.size())) {
+    m_data.resize(m_data.size() + 30000 + i, 0);
+  }
+  else if((m_data_ptr + i) < 0) {
+    m_data.insert(m_data.begin(), 30000 - i, 0);
+    m_data_ptr = 30000 - i + m_data_ptr;
+  }
   m_data_ptr += i;
 }
 void turing_machine::output_data() const { cout << m_data[m_data_ptr]; }
