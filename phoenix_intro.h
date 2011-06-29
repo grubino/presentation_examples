@@ -29,6 +29,9 @@ struct bf_command_sequence {
   bf_command_sequence(char c, int i)
   : m_command(c)
   , m_repetitions(i) {}
+  bf_command_sequence(const bf_command_string& cs)
+  : m_command(cs[0])
+  , m_repetitions(cs.size()) {}
 
   char m_command;
   int m_repetitions;
@@ -199,38 +202,16 @@ struct bf_grammar
       clear_cell
       | transfer_cell
       ;
+
     command_token =
-      eps[_a = val(0)] >> 
-      +(increment[_a += val(1)])
-      [_val = construct<bf_command_sequence>(
-					     val('+')
-					     , _a
-					     )]
-      | +(decrement[_a += val(1)])
-      [_val = construct<bf_command_sequence>(
-					     val('-')
-					     , _a
-					     )]
-      | +(move_right[_a += val(1)])
-      [_val = construct<bf_command_sequence>(
-					     val('>')
-					     , _a
-					     )]
-      | +(move_left[_a += val(1)])
-      [_val = construct<bf_command_sequence>(
-					     val('<')
-					     , _a
-					     )]
-      | +(put_output[_a += val(1)])
-      [_val = construct<bf_command_sequence>(
-					     val('.')
-					     , _a
-					     )]
-      | +(get_input[_a += val(1)])
-      [_val = construct<bf_command_sequence>(
-					     val(',')
-					     , _a
-					     )]
+      (
+       +increment
+       | +decrement
+       | +move_right
+       | +move_left
+       | +put_output
+       | +get_input
+       )[_val = construct<bf_command_sequence>(_1)]
       ;
     
     clear_cell = boost::spirit::qi::string("[-]")[_val = construct<bf_clear_cell>()]
@@ -298,7 +279,7 @@ struct bf_grammar
   rule<bf_command_string::iterator, bf_statement()> statement;
   rule<bf_command_string::iterator, vector<bf_command_variant>()> command_sequence;
   rule<bf_command_string::iterator, bf_command_variant()> command_group;
-  rule<bf_command_string::iterator, bf_command_sequence(), locals<int> > command_token;
+  rule<bf_command_string::iterator, bf_command_sequence()> command_token;
   rule<bf_command_string::iterator, bf_known_command()> known_command_sequence;
   rule<bf_command_string::iterator, bf_clear_cell()> clear_cell;
   rule<bf_command_string::iterator, bf_transfer_cell()> transfer_cell;
